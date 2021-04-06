@@ -130,21 +130,23 @@ CREATE TABLE НазваниеТаблицы
 
     2. Заполняем словари. Например, для городов это будет примерно так (вставляем все уникальные значения из временной таблицы):
 
-    ```sql
-    insert into Cities ([Name]) 
-        select distinct Address_City from apartment_a_import
-    ```
+        ```sql
+        insert into Cities ([Name]) 
+            select distinct Address_City from apartment_a_import
+        ```
+
+        Для улиц напишите сами.
 
     3. И переносим данные в основную таблицу `Apartments` с учетом словарей:
 
-    ```sql
-    INSERT INTO Apartments (AddressCityId, AddressStreetId, AddressHouse, AddressNumber,... дельше мне лень писать )
-        SELECT c.id, s.id, ai.Address_House,... дальше тоже лень
-        FROM apartment_a_import ai, 
-             Cities c,
-             Streets s
-        WHERE c.[Name]=ai.Address_City AND s.Name=ai.Address_Street
-    ```
+        ```sql
+        INSERT INTO Apartments (AddressCityId, AddressStreetId, AddressHouse, AddressNumber,... дельше мне лень писать )
+            SELECT c.id, s.id, ai.Address_House,... дальше тоже лень
+            FROM apartment_a_import ai, 
+                Cities c,
+                Streets s
+            WHERE c.[Name]=ai.Address_City AND s.Name=ai.Address_Street
+        ```
 
 4. Создать таблицу "Предложение". Поля: клиент, риэлтор, объект недвижимости, цена. Все поля являются обязательными. Цена - целое положительное число. Клиент, риэлтор, объект недвижимости - ссылки на сущности соответствующих типов. Пример есть в `sql.md`
 
