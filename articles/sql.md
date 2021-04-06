@@ -57,11 +57,11 @@
 
     ```sql
     INSERT INTO Apartments (AddressCityId, AddressStreetId, AddressHouse, AddressNumber,... дельше мне лень писать )
-        SELECT s.id, st.id, ai.Address_House,... дальше тоже лень
+        SELECT c.id, s.id, ai.Address_House,... дальше тоже лень
         FROM apartment_a_import ai, 
-             Sities s,
-             Streets st
-        WHERE s.[Name]=ai.Address_City AND st.Name=ai.Address_Street
+             Cities c,
+             Streets s
+        WHERE c.[Name]=ai.Address_City AND s.Name=ai.Address_Street
     ```
 
 **Типы данных:**
