@@ -156,7 +156,99 @@ CREATE TABLE НазваниеТаблицы
 
 1. Создать WPF-проект, добавить логотип, иконку
 
-    Замечания по разметке
+    Последнее время стало популярно втыкать авторизацию (ввод логина/пароля и их проверка) в проекты. В простом оконном приложении "красиво" реализовать это не просто, на будущее я буду давать работу с фреймами и страницами, а пока можно сделать такую вёрстку: 
+
+    ```xml
+            Name="Root">
+            <!-- окну даем имя -->
+        <Grid>
+            <!-- создаем две колонки с шириной "auto" -->
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- и создаем два грида, один для верстки формы с логином/паролем -->
+            <Grid 
+                Visibility="Visible"
+                x:Name="PasswordGrid"
+                Width="{Binding ElementName=Root, Path=Width}">
+                <!-- ширину гридов привязываем к ширине окна -->
+                <StackPanel 
+                    Orientation="Vertical"
+                    VerticalAlignment="Center">
+                    <Label Content="Введите логин"/>
+                    <TextBox Name="LoginBox"/>
+                    <Label Content="Введите пароль"/>
+                    <PasswordBox x:Name="PasswordBox"/>
+                    <Button 
+                        x:Name="LoginButton" 
+                        Click="LoginButton_Click" 
+                        Content="ОК"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- второй для основной верстки, он пока скрыт: Visibility="Collapsed"  -->
+            <Grid
+                x:Name="ContentGrid"
+                Grid.Column="1"
+                Visibility="Collapsed"  
+                Width="{Binding ElementName=Root, Path=Width}">
+
+                <Button Content="Logout" Click="LoginButton_Click"/>
+
+            </Grid>
+        </Grid>
+    </Window>
+    ```
+
+    И в коде делаем переключение между гридами:
+
+    ```cs
+    public partial class MainWindow : Window, INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler PropertyChanged;
+    
+        private bool _PasswordVisibility = true;
+
+        private bool PasswordVisibility {
+            get {
+                return _PasswordVisibility;
+            }
+            set {
+                _PasswordVisibility = value;
+                PasswordGrid.Visibility = PasswordVisibility ? Visibility.Visible : Visibility.Collapsed;
+                ContentGrid.Visibility = PasswordVisibility ? Visibility.Collapsed : Visibility.Visible;
+                if (PropertyChanged != null)
+                {
+                    // обновляем не каждое поле по отдельности, а все окно
+                    PropertyChanged(this, new PropertyChangedEventArgs("Root"));
+                }
+            }
+        }
+
+        public MainWindow()
+        {
+            InitializeComponent();
+            PasswordVisibility = true;
+            DataContext = this;
+        }
+
+        private void LoginButton_Click(object sender, RoutedEventArgs e)
+        {
+            // тут нужно конечно навернуть проверку логина и пароля
+            PasswordVisibility = !PasswordVisibility;
+        }
+
+        ...
+    ```
+
+2. Вывод, редактирование, создание, удаление (CRUD) объектов недвижимости (тут есть поля с внешними ключами)
+
+    Список я сделал отдельным окном, потому что в нашей задаче пока не просматривается главная таблица.
+
+
+    Замечания по разметке окна:
 
     ```xml
     <Grid>
@@ -182,9 +274,259 @@ CREATE TABLE НазваниеТаблицы
     </Grid>
     ```
 
-    ![](./img/002.png)
+    **Объекты недвижимости (Apartments)**
 
-2. Подключиться к созданной БД
+    У каждого объекта недвижимости есть поля: адрес и координаты.
+
+    Дополнительные поля: этаж, количество комнат, площадь.
+
+    Дополнительные поля являются необязательными к заполнению.
+
+    Адрес объекта недвижимости состоит из четырех полей: город, улица, номер дома, номер квартиры.
+
+    Координаты объекта недвижимости - это географические координаты, пара вещественных значений: широта, долгота. Широта может принимать значения от -90 до +90, долгота - от -180 до +180.
+
+    Интерфейс должен не позволять пользователю удалять объект недвижимости, связанный с предложением.
+
+    Добавьте возможность фильтрации объектов недвижимости по типу, адресу.
+
+
+    1. DataGrid (список объектов недвижимости)
+
+        В окне создаем свойство *ApartmentsList* для списка и заполняем его в конструкторе
+
+        ```cs
+        private IEnumerable<Apartments> _ApartmentsList;
+
+        public IEnumerable<Apartments> ApartmentsList
+        {
+            get
+            {
+                return _ApartmentsList;
+            }
+            set
+            {
+                _ApartmentsList = value;
+                // при изменении списка перерисуется DataGrid
+                if (PropertyChanged != null)
+                {
+                    PropertyChanged(this, new PropertyChangedEventArgs("ApartmentsList"));
+                }
+            }
+        }
+
+        public ApartmentsListWindow()
+        {
+            InitializeComponent();
+            DataContext = this;
+            ApartmentsList = Core.DB.Apartments.ToArray();
+        }
+        ```
+
+        В разметке добавляем и настраиваем DataGrid для этого списка
+
+        ```xml
+        <DataGrid
+            x:Name="ApartmentsDataGrid"
+            Grid.Row="1"
+            CanUserAddRows="false"
+            AutoGenerateColumns="False"
+            ItemsSource="{Binding ApartmentsList}">
+
+            <DataGrid.Columns>
+                <DataGridTextColumn
+                    Width="100"
+                    Header="Город"
+                    Binding="{Binding Cities.Name}"/>
+                <!-- Entity создает для нас виртуальные свойства Cities и Streets, 
+                через которые можем получить название города и улицы соответственно -->
+                <DataGridTextColumn
+                    Width="100"
+                    Header="Улица"
+                    Binding="{Binding Streets.Name}"/>
+                <DataGridTextColumn
+                    Width="50"
+                    Header="Дом"
+                    Binding="{Binding House}"/>
+                <DataGridTextColumn
+                    Width="70"
+                    Header="Квартира"
+                    Binding="{Binding Number}"/>
+                <DataGridTextColumn
+                    Width="70"
+                    Header="Площадь"
+                    Binding="{Binding TotalArea}"/>
+                <DataGridTextColumn
+                    Width="120"
+                    Header="Количество комнат"
+                    Binding="{Binding Rooms}"/>
+                <DataGridTextColumn
+                    Width="50"
+                    Header="Этаж"
+                    Binding="{Binding Floor}"/>
+                <DataGridTemplateColumn
+                    Header="Действия">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel 
+                                Orientation="Horizontal">
+                                <Button 
+                                    Content="Редактировать" 
+                                    Name="EditButton" 
+                                    Click="EditButton_Click"/>
+                                <Button 
+                                    Content="Удалить" 
+                                    Name="DeleteButton" 
+                                    Click="DeleteButton_Click"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+        ```
+
+        **Удаление объекта недвижимости**
+
+        ```cs
+        private void DeleteButton_Click(object sender, RoutedEventArgs e)
+        {
+            var Apartment = ApartmentsDataGrid.SelectedItem as Apartments;
+            // если объект недвижимости учавствует в каких-то предложениях, 
+            // список предложений буде не пустой (магия внешних ключей)
+            if (Apartment.Offers.Count > 0)
+            {
+                MessageBox.Show("Нельзя удалять объект недвижимости, на который есть предложение");
+                return;
+            }
+
+            // процесс удаления заворачиваем в try..catch
+            try
+            {
+                Core.DB.Apartments.Remove(Apartment);
+                Core.DB.SaveChanges();
+                ApartmentsList = Core.DB.Apartments.ToArray();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при удалении объекта недвижимости: {ex.Message}");
+            }
+        }
+        ```
+
+        **Редактрование/добавление объекта недвижимости**   
+
+        1. Создаем отдельное окно 
+
+            В конструкторе окна передаем ссылку на текущий объект недвижимости и считываем справочники улиц и городов:
+
+            ```cs
+            public Apartments CurrentApartment { get; set; }
+            public IEnumerable<Cities> CitiesList { get; set; }
+            public IEnumerable<Streets> StreetsList { get; set; }
+
+            public ApartmentWindow(Apartments Apartment)
+            {
+                InitializeComponent();
+                DataContext = this;
+                CurrentApartment = Apartment;
+                CitiesList = Core.DB.Cities.ToArray();
+                StreetsList = Core.DB.Streets.ToArray();
+            }
+            ```
+
+        2. В разметке рисуем все поля (кроме Id)
+
+            ```xml
+            <Grid>
+                <StackPanel
+                    Margin="10"
+                    Orientation="Vertical">
+
+                    <Label Content="Город"/>
+                    <!-- для справочных полей выводим выпадающие списки
+                    выбранным элементом которых является значение виртуального свойства Cities и Streets -->
+                    <ComboBox
+                        ItemsSource="{Binding CitiesList}"
+                        SelectedItem="{Binding CurrentApartment.Cities}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <Label Content="{Binding Name}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Label Content="Улица"/>
+                    <ComboBox
+                        ItemsSource="{Binding StreetsList}"
+                        SelectedItem="{Binding CurrentApartment.Streets}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <Label Content="{Binding Name}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Label Content="Дом"/>
+                    <TextBox Text="{Binding CurrentApartment.House}"/>
+
+                    <!-- тут мне опять лень писать, остальные поля простые, заполнить по образу "дома" -->
+
+                    <Button x:Name="SaveButton" Content="Сохранить" Click="SaveButton_Click"/>
+                </StackPanel>
+            </Grid>
+            ```
+
+        3. По нажатию кнопки сохранить проверяем обязательные поля (я не сделал, но надо еще проверить что сумма положительная)
+
+            ```cs
+            private void SaveButton_Click(object sender, RoutedEventArgs e)
+            {
+                // опять же всю работу с БД заворачиваем в try..catch
+                try
+                {
+                    if (CurrentApartment.Cities == null)
+                        throw new Exception("Не выбран город");
+
+                    if (CurrentApartment.Streets == null)
+                        throw new Exception("Не выбрана улица");
+
+                    if (CurrentApartment.Id == 0)
+                        Core.DB.Apartments.Add(CurrentApartment);
+
+                    Core.DB.SaveChanges();
+                    DialogResult = true;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка: {ex.Message}");
+                }
+            }
+            ```
+
+        4. И в списке объектов недвижимости на кнопки добавить/редактировать повесить обработчики
+
+            ```cs
+            private void AddButton_Click(object sender, RoutedEventArgs e)
+            {
+                var NewApartmentWindow = new ApartmentWindow(new Apartments());
+                if (NewApartmentWindow.ShowDialog() == true)
+                {
+                    ApartmentsList = Core.DB.Apartments.ToArray();
+                }
+            }
+
+            private void EditButton_Click(object sender, RoutedEventArgs e)
+            {
+                var EditApartmentWindow = new ApartmentWindow(ApartmentsDataGrid.SelectedItem as Apartments);
+                if (EditApartmentWindow.ShowDialog() == true)
+                {
+                    ApartmentsList = Core.DB.Apartments.ToArray();
+                }
+            }
+            ```
+
+    Реализовать CRUD для Клиентов, Агентов и Предложений
+
+<!-- 2. Подключиться к созданной БД
 3. Реализовать просмотр, создание, редактирование и удаление клиентов и агентов
 
     **Клиент**
@@ -207,19 +549,4 @@ CREATE TABLE НазваниеТаблицы
 
     Интерфейс должен не позволять пользователю создать риэлтора без указания фамилии, имени и отчества, удалять риэлтора, связанного с потребностью или предложением.
 
-    **Объекты недвижимости (Apartments)**
-
-    У каждого объекта недвижимости есть два необязательных к заполнению поля: адрес и координаты.
-
-    Дополнительные поля: этаж, количество комнат, площадь.
-
-    Все поля являются необязательными к заполнению.
-
-    Адрес объекта недвижимости состоит из четырех необязательных к заполнению полей: город, улица, номер дома, номер квартиры.  Все они являются строковыми типами.
-
-    Координаты объекта недвижимости - это географические координаты, пара вещественных значений: широта, долгота. Широта может принимать значения от -90 до +90, долгота - от -180 до +180.
-
-    Интерфейс должен не позволять пользователю удалять объект недвижимости, связанный с предложением.
-
-    Добавьте возможность фильтрации объектов недвижимости по типу, адресу.
-
+ -->
