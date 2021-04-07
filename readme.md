@@ -526,6 +526,212 @@ CREATE TABLE НазваниеТаблицы
 
     Реализовать CRUD для Клиентов, Агентов и Предложений
 
+## День 3
+
+Фильтрация, поиск, сортировка и раскраска (на основе таблицы объектов недвижимости)
+
+### Фильтрация
+
+Фильтровать будем по улицам
+
+1. В коде окна (в конструкторе) заполняем свойство StreetsList, добавляя в начало списка улицу с названием "Все улицы"
+
+    ```cs
+    public List<Streets> StreetsList { get; set; }
+
+    ...
+
+    public ApartmentsListWindow()
+    {
+        InitializeComponent();
+        DataContext = this;
+        ApartmentsList = Core.DB.Apartments.ToArray();
+        StreetsList = Core.DB.Streets.ToList();
+        StreetsList.Insert(0, new Streets { Name = "Все улицы" });
+    }
+    ```
+
+2. В разметке в верхнюю панель (где у нас кнопка "добавить") добавляем выпадающий список улиц
+
+    ```xml
+    <WrapPanel 
+        Orientation="Horizontal" 
+        ItemHeight="40">
+        <Button 
+            x:Name="AddButton" 
+            Click="AddButton_Click"
+            Content="Добавить объект недвижимости"/>
+        
+        <Label Content="Улица" VerticalAlignment="Center"/>
+        <ComboBox
+            Width="150"
+            x:Name="StreetFilter"
+            VerticalAlignment="Center"
+            SelectedIndex="0"
+            SelectionChanged="StreetFilter_SelectionChanged"
+            ItemsSource="{Binding StreetsList}">
+            <ComboBox.ItemTemplate>
+                <DataTemplate>
+                    <Label Content="{Binding Name}"/>
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
+    </WrapPanel>
+    ```
+
+3. Реализуем обработчик для события *SelectionChanged*
+
+    ```cs
+    // фильтр будет хранить Id улицы
+    private int _StreetFilterValue = 0;
+    public int StreetFilterValue {
+        get {
+            return _StreetFilterValue;
+        }
+        set {
+            _StreetFilterValue = value;
+            if (PropertyChanged != null)
+            {
+                PropertyChanged(this, new PropertyChangedEventArgs("ApartmentsList"));
+            }
+        } 
+    }
+
+    private void StreetFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        StreetFilterValue = (StreetFilter.SelectedItem as Streets).Id;
+    }
+    ```
+
+4. И меняем геттер для списка объектов недвижимости
+
+    ```cs
+    public IEnumerable<Apartments> ApartmentsList
+        {
+            get
+            {
+                var res = _ApartmentsList;
+
+                // у объекта "Все улицы" Id=0, т.к. он взят не из базы, а создан в приложении
+                // если выбрана улица, то выбираем только объекты с такой улицей
+                if (_StreetFilterValue > 0)
+                    res = res.Where(ai => ai.StreetsId == _StreetFilterValue);
+
+                return res;
+            }
+            set
+            ...
+    ```
+
+### Поиск
+
+Искать тоже будем по улицам, но не по полному названию, а по части строки
+
+1. В разметке окна добавляем строку поиска
+
+    ```xml
+    <Label Content="искать" VerticalAlignment="Center"/>
+            <TextBox
+                Width="200"
+                VerticalAlignment="Center"
+                x:Name="SearchFilterTextBox" KeyUp="SearchFilter_KeyUp"/>
+    ```
+
+2. В коде окна запоминаем строку поиска
+
+    ```cs
+    private string _SearchFilter = "";
+    public string SearchFilter
+    {
+        get
+        {
+            return _SearchFilter;
+        }
+        set
+        {
+            _SearchFilter = value;
+            if (PropertyChanged != null)
+            {
+                PropertyChanged(this, new PropertyChangedEventArgs("ApartmentsList"));
+            }
+        }
+    }
+
+    private void SearchFilter_KeyUp(object sender, KeyEventArgs e)
+    {
+        SearchFilter = SearchFilterTextBox.Text;
+    }
+    ```
+
+3. И в геттере списка объектов недвижимости добавляем условие:
+
+    ```cs
+    ...
+    
+    // ищем вхождение строки фильтра в названии объекта без учета регистра
+    if (SearchFilter != "")
+        res = res.Where(ai => ai.Streets.Name.IndexOf(SearchFilter, StringComparison.OrdinalIgnoreCase) >= 0);
+
+    return res;
+    ```
+
+### Сортировка
+
+Сортировку сделаем по количеству комнат
+
+1. В разметке добавляем радиокнопки
+
+    ```xml
+    <Label Content="Количество комнат:" VerticalAlignment="Center"/>
+    <RadioButton
+        GroupName="Rooms"
+        Tag="1"
+        Content="по возрастанию"
+        IsChecked="True"
+        Checked="RadioButton_Checked"
+        VerticalAlignment="Center"/>
+    <RadioButton
+        GroupName="Rooms"
+        Tag="2"
+        Content="по убыванию"
+        Checked="RadioButton_Checked"
+        VerticalAlignment="Center"/>
+    ```
+
+2. В коде запоминаем выбор
+
+    ```cs
+    private bool _SortAsc = true;
+    public bool SortAsc
+    {
+        get {
+            return _SortAsc;
+        }
+        set {
+            _SortAsc = value;
+            if (PropertyChanged != null)
+            {
+                PropertyChanged(this, new PropertyChangedEventArgs("ApartmentsList"));
+            }
+        }
+    }
+
+    private void RadioButton_Checked(object sender, RoutedEventArgs e)
+    {
+        SortAsc = (sender as RadioButton).Tag.ToString() == "1";
+    }
+    ```
+
+3. И добавляем сортировку списка в геттер
+
+    ```cs
+    ...
+    if (SortAsc) res = res.OrderBy(ai=>ai.Rooms);
+    else res = res.OrderByDescending(ai => ai.Rooms);
+
+    return res;
+    ```
+
 <!-- 2. Подключиться к созданной БД
 3. Реализовать просмотр, создание, редактирование и удаление клиентов и агентов
 
