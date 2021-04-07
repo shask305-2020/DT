@@ -732,27 +732,107 @@ CREATE TABLE НазваниеТаблицы
     return res;
     ```
 
-<!-- 2. Подключиться к созданной БД
-3. Реализовать просмотр, создание, редактирование и удаление клиентов и агентов
+### Раскраска строк по условию
 
-    **Клиент**
+Выделим цветом однокомнатные квартиры
 
-    Поля: фамилия, имя, отчество, номер телефона, электронная почта.
+1. В DataGrid добавим триггер для строк
 
-    Любое из полей: фамилия, имя, отчество - может отсутствовать, равно как и все сразу. Поля номер телефона и электронная почта не обязательны к заполнению, но одно из них должно быть указано.
+    ```xml
+    <DataGrid.RowStyle>
+        <Style TargetType="DataGridRow">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Rooms}" Value="1">
+                    <Setter Property="Background" Value="LightGreen"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </DataGrid.RowStyle>
 
-    Реализуйте интерфейс, который позволит пользователю осуществлять операции создания нового клиента, обновления информации о клиенте, удаления клиента.
+    <DataGrid.Columns>
+    ...
+    ```
 
-    Интерфейс должен не позволять пользователю создать клиента без указания номера телефона или электронной почты, удалять клиента, связанного с потребностью или предложением.
+Если раскраска нужна для какого-то более сложного условия, например, для квартир с прощадью больше 50 кв.м. То в этом случае в класс таблицы добавляется вычисляемое свойство:
 
-    **Риэлтор**
+```cs
+// в C# класс может быть размазан по нескольким файлам, если при объявлении используется 
+// ключевое слово partial
+// этот кусок кода вставляем в файл с классом окна ApartmentsListWindow
+public partial class Apartments
+{
+    public bool TotalAreaBigger50
+    {
+        get
+        {
+            return TotalArea > 50;
+        }
+    }
+}
+```
 
-    Поля: фамилия, имя, отчество, доля от комиссии.
+И переписываем условие раскраски с учетом нового свойства
 
-    У риэлторов поля ФИО обязательны к заполнению. Доля от комиссии - необязательное числовое поле, может принимать значение от 0 до 100.
+```xml
+<DataGrid.RowStyle>
+    <Style TargetType="DataGridRow">
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding TotalAreaBigger50}" Value="true">
+                <Setter Property="Background" Value="LightGreen"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+</DataGrid.RowStyle>
+```
 
-    Реализуйте интерфейс, который позволит пользователю осуществлять операции создания нового риэлтора, обновления информации о риэлторе, удаления риэлтора.
+### Счетчик количества записей в таблице
 
-    Интерфейс должен не позволять пользователю создать риэлтора без указания фамилии, имени и отчества, удалять риэлтора, связанного с потребностью или предложением.
+Часто встречается задание добавить информацию о том сколько всего записей в таблице и сколько отфильтровано.
 
- -->
+Сделать это просто: добавить под таблицей еще одну строку Grid-а и в нее вывести два текстовых блока со свойствами (Label не подходит, т.к. он не поддерживает параметр *StringFormat*)
+
+```xml
+<StackPanel Grid.Row="2" Orientation="Horizontal">
+    <TextBlock Text="{Binding SelectedRows,StringFormat=Выделено {0} из&#xA0;}"/>
+    <TextBlock Text="{Binding TotalRows}"/>
+</StackPanel>
+```
+
+И в коде создать эти свойства
+
+```cs
+ public int SelectedRows
+{
+    get {
+        return ApartmentsList.Count();
+    }
+}
+
+public int TotalRows
+{
+    get
+    {
+        return _ApartmentsList.Count();
+    }
+}
+```
+
+Для того, чтобы эти значения обновлялись при смене фильтров, нужно добавить во все сеттеры вызов оповещения об изменении компонента: 
+
+```cs
+PropertyChanged(this, new PropertyChangedEventArgs("SelectedRows"));
+PropertyChanged(this, new PropertyChangedEventArgs("TotalRows"));
+```
+
+Либо прописать отдельную функцию и вызывать ее
+
+```cs
+private void Invalidate() {
+    if (PropertyChanged != null)
+    {
+        PropertyChanged(this, new PropertyChangedEventArgs("ApartmentsList"));
+        PropertyChanged(this, new PropertyChangedEventArgs("SelectedRows"));
+        PropertyChanged(this, new PropertyChangedEventArgs("TotalRows"));
+    }
+}
+```
