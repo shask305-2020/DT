@@ -631,10 +631,10 @@ CREATE TABLE НазваниеТаблицы
 
     ```xml
     <Label Content="искать" VerticalAlignment="Center"/>
-            <TextBox
-                Width="200"
-                VerticalAlignment="Center"
-                x:Name="SearchFilterTextBox" KeyUp="SearchFilter_KeyUp"/>
+    <TextBox
+        Width="200"
+        VerticalAlignment="Center"
+        x:Name="SearchFilterTextBox" KeyUp="SearchFilter_KeyUp"/>
     ```
 
 2. В коде окна запоминаем строку поиска
@@ -836,3 +836,7 @@ private void Invalidate() {
     }
 }
 ```
+
+## День 4
+
+Библиотека классов, тестирование, тестовые сценарии
