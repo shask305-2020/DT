@@ -837,6 +837,26 @@ private void Invalidate() {
 }
 ```
 
+### Стили
+
+Стили для всех компонентов приложения можно задать в файле `App.xaml`
+
+```xml
+<Application.Resources>
+    <Style TargetType="Button">
+        <Setter Property="Background" Value="AliceBlue"/>
+        <Setter Property="FontStyle" Value="Italic"/>
+    </Style>
+    <Style TargetType="Control">
+        <Setter Property="FontFamily" Value="Times New Roman"/>
+    </Style>
+</Application.Resources>
+```
+
+У меня не получилось таким образом поменять шрифт меткам (Label). В таком случае можно задать стили окну. Все стили потомки наследуют от контейнера.
+
+
+
 ## День 4
 
 Библиотека классов, тестирование, тестовые сценарии
