@@ -858,7 +858,7 @@ private void Invalidate() {
 
 ## Валидация данных на форме (по запросу Ларионова)
 
-1. В класс модели (у меня это как обычно) **Apartments** добавляем реализацию интерфейса **IDataErrorInfo** 
+1. В класс модели (у меня это как обычно **Apartments**) добавляем реализацию интерфейса **IDataErrorInfo** 
 
     ```cs
     public partial class Apartments: IDataErrorInfo
