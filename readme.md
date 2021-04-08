@@ -856,7 +856,93 @@ private void Invalidate() {
 У меня не получилось таким образом поменять шрифт меткам (Label). В таком случае можно задать стили окну. Все стили потомки наследуют от контейнера.
 
 
+## Валидация данных на форме (по запросу Ларионова)
 
+1. В класс модели (у меня это как обычно) **Apartments** добавляем реализацию интерфейса **IDataErrorInfo** 
+
+    ```cs
+    public partial class Apartments: IDataErrorInfo
+    {
+        // словарь ошибок будет хранить ошибки валидации
+        private Dictionary<string,string> AllErrors = new Dictionary<string, string>();
+
+        // собственно валидация полей
+        public string this[string columnName]
+        {
+            get
+            {
+                string error = String.Empty;
+                switch (columnName)
+                {
+                    case "Rooms":
+                        if (Rooms <= 0)
+                        {
+                            error = "Количество комнат должно быть положительным числом";
+                            AllErrors["Rooms"] = "Количество комнат должно быть положительным числом";
+                        }
+                        else
+                            AllErrors.Remove("Rooms");
+                        break;
+                }
+                return error;
+            }
+        }
+
+        // после редактирования записи мы можем не проверять все поля, а сразу вывести список ошибок
+        public string Error
+        {
+            get { 
+                return Core.DictionaryToString( AllErrors ); 
+            }
+        }
+      
+
+        public bool TotalAreaBigger50
+        {
+            get
+            {
+                return TotalArea > 50;
+            }
+        }
+    }
+    ```
+
+    В класс **Core** добавим вспомогательную статическую функцию *DictionaryToString*
+
+    ```cs
+    public static string DictionaryToString(Dictionary<string, string> dictionary)
+    {
+        string dictionaryString = "";
+        foreach (KeyValuePair<string, string> keyValues in dictionary)
+        {
+            dictionaryString += keyValues.Value + ", ";
+        }
+        return dictionaryString.TrimEnd(',', ' ');
+    }
+    ```
+
+    В разметку формы редактирования добавляем валидацию:
+
+    ```xml
+    <Label Content="Количество комнат"/>
+    <TextBox>
+        <TextBox.Text>
+            <Binding Path="CurrentApartment.Rooms">
+                <Binding.ValidationRules>
+                    <DataErrorValidationRule />
+                </Binding.ValidationRules>
+            </Binding>
+        </TextBox.Text>
+    </TextBox>
+    ```
+
+    И на кнопку "Сохранить" вешаем проверку наличия ошибки
+
+    ```cs
+    if(CurrentApartment.Error != "")
+        throw new Exception(CurrentApartment.Error);
+    ```
+ 
 ## День 4
 
 Библиотека классов, тестирование, тестовые сценарии
